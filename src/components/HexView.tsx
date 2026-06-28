@@ -3,21 +3,20 @@ import type { HexPage } from "../types";
 import { readHex } from "../api";
 
 interface Props {
-  relPath: string;
-  rootA: string;
-  rootB: string;
+  pathA: string;
+  pathB: string;
 }
 
 const PAGE = 16 * 64; // 64 rows
 
-export function HexView({ relPath, rootA, rootB }: Props) {
+export function HexView({ pathA, pathB }: Props) {
   const [a, setA] = useState<HexPage | null>(null);
   const [b, setB] = useState<HexPage | null>(null);
 
   useEffect(() => {
-    readHex(relPath, rootA, 0, PAGE).then(setA).catch(() => setA(null));
-    readHex(relPath, rootB, 0, PAGE).then(setB).catch(() => setB(null));
-  }, [relPath, rootA, rootB]);
+    readHex(pathA, 0, PAGE).then(setA).catch(() => setA(null));
+    readHex(pathB, 0, PAGE).then(setB).catch(() => setB(null));
+  }, [pathA, pathB]);
 
   return (
     <div className="diff">

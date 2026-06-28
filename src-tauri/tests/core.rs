@@ -5,10 +5,14 @@ use std::fs;
 use std::path::Path;
 use std::time::{Duration, SystemTime};
 use tauri_app_lib::binary::{self, Media};
-use tauri_app_lib::commands::scan_session;
-use tauri_app_lib::diff::{self, HunkTag};
+use tauri_app_lib::commands::{copy_file, open_file, scan_session, write_text};
+use tauri_app_lib::diff::FileDiff;
 use tauri_app_lib::model::{Entry, EntryKind, Status};
 use tempfile::TempDir;
+
+fn p(dir: &Path, rel: &str) -> String {
+    dir.join(rel).to_string_lossy().to_string()
+}
 
 fn write(dir: &Path, rel: &str, contents: &str) {
     let p = dir.join(rel);
@@ -140,57 +144,49 @@ fn compare_ladder() {
     assert_eq!(find(&s.tree, "f4").unwrap().status, Status::Differ);
 }
 
-// 3. text diff hunk ops.
+// 4. open_file returns both buffers; write_text saves explicitly (no auto-save).
 #[test]
-fn text_diff_hunks() {
-    let a = "one\ntwo\nthree\n";
-    let b = "one\nTWO\nthree\nfour\n";
-    let hunks = diff::diff_text(a, b);
-
-    // there must be a Replace (two -> TWO) and an Insert (four)
-    assert!(hunks.iter().any(|h| h.tag == HunkTag::Replace
-        && h.a_lines == vec!["two\n"]
-        && h.b_lines == vec!["TWO\n"]));
-    assert!(hunks
-        .iter()
-        .any(|h| h.tag == HunkTag::Insert && h.b_lines == vec!["four\n"]));
-    // and Equal context for "one"
-    assert!(hunks
-        .iter()
-        .any(|h| h.tag == HunkTag::Equal && h.a_lines == vec!["one\n"]));
-}
-
-// 4. apply_hunk round-trips both directions.
-#[test]
-fn apply_hunk_round_trip() {
+fn open_and_save() {
     let a = TempDir::new().unwrap();
     let b = TempDir::new().unwrap();
     write(a.path(), "f", "one\ntwo\nthree\n");
     write(b.path(), "f", "one\nCHANGED\nthree\n");
 
-    let ar = a.path().to_string_lossy().to_string();
-    let br = b.path().to_string_lossy().to_string();
+    let fd = open_file(p(a.path(), "f"), p(b.path(), "f")).unwrap();
+    match fd {
+        FileDiff::Text { a: ta, b: tb } => {
+            assert_eq!(ta, "one\ntwo\nthree\n");
+            assert_eq!(tb, "one\nCHANGED\nthree\n");
+        }
+        other => panic!("expected Text, got {:?}", other),
+    }
 
-    // copy the differing hunk from A into B
-    let hunks = diff::diff_file_text(&ar, &br, "f").unwrap();
-    let replace = hunks.iter().find(|h| h.tag == HunkTag::Replace).unwrap();
-    let after = diff::apply_hunk(&ar, &br, "f", replace.id).unwrap();
-
-    // B now equals A; no non-equal hunks remain
+    // simulate "copy all A->B then save B": write A's content to B's path
+    write_text(p(b.path(), "f"), "one\ntwo\nthree\n".to_string()).unwrap();
     assert_eq!(fs::read_to_string(b.path().join("f")).unwrap(), "one\ntwo\nthree\n");
-    assert!(after.iter().all(|h| h.tag == HunkTag::Equal));
+    // A side untouched on disk
+    assert_eq!(fs::read_to_string(a.path().join("f")).unwrap(), "one\ntwo\nthree\n");
 }
 
-// 5. whole-file copy.
+// 4b. binary files open as a Binary marker, not Text.
+#[test]
+fn open_binary_marker() {
+    let a = TempDir::new().unwrap();
+    let b = TempDir::new().unwrap();
+    fs::write(a.path().join("blob"), b"\x00\x01\x02").unwrap();
+    fs::write(b.path().join("blob"), b"\x00\x09\x02").unwrap();
+    let fd = open_file(p(a.path(), "blob"), p(b.path(), "blob")).unwrap();
+    assert!(matches!(fd, FileDiff::Binary));
+}
+
+// 5. whole-file copy (full paths, creates parent dirs).
 #[test]
 fn copy_whole_file() {
     let a = TempDir::new().unwrap();
     let b = TempDir::new().unwrap();
-    write(a.path(), "sub/new.txt", "fresh\n");
+    write(a.path(), "new.txt", "fresh\n");
 
-    let ar = a.path().to_string_lossy().to_string();
-    let br = b.path().to_string_lossy().to_string();
-    diff::copy_file(&ar, &br, "sub/new.txt").unwrap();
+    copy_file(p(a.path(), "new.txt"), p(b.path(), "sub/new.txt")).unwrap();
 
     assert_eq!(
         fs::read_to_string(b.path().join("sub/new.txt")).unwrap(),

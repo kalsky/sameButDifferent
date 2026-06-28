@@ -1,123 +1,157 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import "./App.css";
-import type { CompareSession, Entry, FileDiff } from "./types";
-import { scanSession, diffFile, applyHunk, copyFile } from "./api";
-import { RootPicker } from "./components/RootPicker";
-import { TreeView } from "./components/TreeView";
-import { DiffView } from "./components/DiffView";
-import { HexView } from "./components/HexView";
-import { ImageView } from "./components/ImageView";
+import type { CompareSession } from "./types";
+import { scanSession } from "./api";
+import { joinPath } from "./format";
+import { HomeView } from "./components/HomeView";
+import { FolderView } from "./components/FolderView";
+import { FileView } from "./components/FileView";
+
+type View = "home" | "folder" | "file";
 
 interface OpenFile {
-  entry: Entry;
-  diff: FileDiff;
+  pathA: string;
+  pathB: string;
+  title: string;
+  returnTo: "home" | "folder";
 }
 
+interface Confirm {
+  msg: string;
+  confirmLabel: string;
+  onConfirm: () => void;
+}
+
+const basename = (p: string) => p.replace(/\/$/, "").split("/").pop() || p;
+
 function App() {
-  const [roots, setRoots] = useState<string[]>(["", ""]); // 2-way; push a 3rd later
+  const [view, setView] = useState<View>("home");
   const [session, setSession] = useState<CompareSession | null>(null);
-  const [diffOnly, setDiffOnly] = useState(true);
-  const [openFile, setOpenFile] = useState<OpenFile | null>(null);
+  const [file, setFile] = useState<OpenFile | null>(null);
+  const [confirm, setConfirm] = useState<Confirm | null>(null);
+  const unsavedRef = useRef(false);
 
-  async function compare() {
-    setOpenFile(null);
-    setSession(await scanSession(roots));
+  const setDirty = useCallback((d: boolean) => {
+    unsavedRef.current = d;
+  }, []);
+
+  // Guard the window close: if there are unsaved edits, ask before discarding.
+  useEffect(() => {
+    const unlisten = getCurrentWindow().onCloseRequested((e) => {
+      if (unsavedRef.current) {
+        e.preventDefault();
+        setConfirm({
+          msg: "You have unsaved changes. Close anyway and discard them?",
+          confirmLabel: "Discard & close",
+          onConfirm: () => {
+            unsavedRef.current = false;
+            getCurrentWindow().destroy();
+          },
+        });
+      }
+    });
+    return () => {
+      unlisten.then((f) => f());
+    };
+  }, []);
+
+  async function compareFolders(a: string, b: string) {
+    setSession(await scanSession([a, b]));
+    setView("folder");
   }
 
-  async function openEntry(entry: Entry) {
-    if (entry.kind !== "File") return;
-    const diff = await diffFile(entry.rel_path, roots[0], roots[1]);
-    setOpenFile({ entry, diff });
+  function compareFiles(a: string, b: string) {
+    setFile({ pathA: a, pathB: b, title: `${basename(a)} ↔ ${basename(b)}`, returnTo: "home" });
+    setView("file");
   }
 
-  async function onCopy(hunkId: number, dir: "AtoB" | "BtoA") {
-    if (!openFile) return;
-    const [from, to] = dir === "AtoB" ? [roots[0], roots[1]] : [roots[1], roots[0]];
-    const hunks = await applyHunk(openFile.entry.rel_path, from, to, hunkId);
-    setOpenFile({ ...openFile, diff: { kind: "Text", hunks } });
+  function openFromFolder(rel: string) {
+    if (!session) return;
+    const [rootA, rootB] = session.roots;
+    setFile({
+      pathA: joinPath(rootA, rel),
+      pathB: joinPath(rootB, rel),
+      title: rel,
+      returnTo: "folder",
+    });
+    setView("file");
   }
 
-  async function copyWhole(dir: "AtoB" | "BtoA") {
-    if (!openFile) return;
-    const [from, to] = dir === "AtoB" ? [roots[0], roots[1]] : [roots[1], roots[0]];
-    await copyFile(openFile.entry.rel_path, from, to);
-    await compare();
+  // Leaving the file view also risks losing unsaved edits — guard it too.
+  function leaveFile() {
+    const go = () => {
+      unsavedRef.current = false;
+      setView(file?.returnTo ?? "home");
+    };
+    if (unsavedRef.current) {
+      setConfirm({
+        msg: "You have unsaved changes in this file. Leave and discard them?",
+        confirmLabel: "Discard & leave",
+        onConfirm: go,
+      });
+    } else {
+      go();
+    }
   }
+
+  async function rescan() {
+    if (session) setSession(await scanSession(session.roots));
+  }
+
+  const folderActive = view === "folder";
 
   return (
     <div className="app">
-      <header>
-        <RootPicker roots={roots} setRoots={setRoots} onCompare={compare} />
-        <label className="toggle">
-          <input type="checkbox" checked={diffOnly} onChange={(e) => setDiffOnly(e.target.checked)} />
-          differences only
-        </label>
-      </header>
+      {view === "home" && (
+        <HomeView onCompareFolders={compareFolders} onCompareFiles={compareFiles} />
+      )}
 
-      <div className="body">
-        <aside className="sidebar">
-          {session ? (
-            <TreeView tree={session.tree} onOpen={openEntry} diffOnly={diffOnly} />
-          ) : (
-            <p className="hint">Pick two folders and Compare.</p>
-          )}
-        </aside>
+      {/* FolderView stays mounted while drilling into files so its filter/expansion/scroll persist. */}
+      {session && (
+        <div className={"viewhost" + (folderActive ? "" : " hidden")}>
+          <FolderView
+            session={session}
+            onOpenFile={openFromFolder}
+            onBack={() => setView("home")}
+            onRescan={rescan}
+          />
+        </div>
+      )}
 
-        <main className="content">
-          {openFile ? (
-            <Viewer
-              file={openFile}
-              rootA={roots[0]}
-              rootB={roots[1]}
-              onCopy={onCopy}
-              copyWhole={copyWhole}
-            />
-          ) : (
-            <p className="hint">Select a file to view its diff.</p>
-          )}
-        </main>
-      </div>
+      {view === "file" && file && (
+        <div className="viewhost">
+          <FileView
+            pathA={file.pathA}
+            pathB={file.pathB}
+            title={file.title}
+            onBack={leaveFile}
+            onDirtyChange={setDirty}
+          />
+        </div>
+      )}
+
+      {confirm && (
+        <div className="modalbg" onClick={() => setConfirm(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <p>{confirm.msg}</p>
+            <div className="modalbtns">
+              <button onClick={() => setConfirm(null)}>Cancel</button>
+              <button
+                className="danger"
+                onClick={() => {
+                  const fn = confirm.onConfirm;
+                  setConfirm(null);
+                  fn();
+                }}
+              >
+                {confirm.confirmLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
-  );
-}
-
-function Viewer({
-  file,
-  rootA,
-  rootB,
-  onCopy,
-  copyWhole,
-}: {
-  file: OpenFile;
-  rootA: string;
-  rootB: string;
-  onCopy: (id: number, dir: "AtoB" | "BtoA") => void;
-  copyWhole: (dir: "AtoB" | "BtoA") => void;
-}) {
-  const { entry, diff } = file;
-  return (
-    <>
-      <div className="filebar">
-        <span>{entry.rel_path}</span>
-        {entry.status.kind === "OnlyIn" && (
-          <span className="wholecopy">
-            <button onClick={() => copyWhole(entry.status.kind === "OnlyIn" && entry.status.root === 0 ? "AtoB" : "BtoA")}>
-              copy whole file →
-            </button>
-          </span>
-        )}
-      </div>
-      {diff.kind === "Text" && (
-        <DiffView hunks={diff.hunks} rootA={rootA} rootB={rootB} onCopy={onCopy} />
-      )}
-      {diff.kind === "Binary" && (
-        <HexView relPath={entry.rel_path} rootA={rootA} rootB={rootB} />
-      )}
-      {diff.kind === "Image" && (
-        <ImageView relPath={entry.rel_path} rootA={rootA} rootB={rootB} />
-      )}
-      {diff.kind === "Pdf" && <p className="hint">PDF compare coming in v1.1 — files differ.</p>}
-    </>
   );
 }
 

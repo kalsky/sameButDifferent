@@ -32,20 +32,10 @@ export interface CompareSession {
   tree: Entry[];
 }
 
-export type HunkTag = "Equal" | "Insert" | "Delete" | "Replace";
-
-export interface Hunk {
-  id: number;
-  tag: HunkTag;
-  a_start: number;
-  a_lines: string[];
-  b_start: number;
-  b_lines: string[];
-}
-
-// diff_file result — serde tag="kind"
+// open_file result — serde tag="kind". Text carries both buffers; the merge editor
+// (CodeMirror) does diffing + editing client-side.
 export type FileDiff =
-  | { kind: "Text"; hunks: Hunk[] }
+  | { kind: "Text"; a: string; b: string }
   | { kind: "Binary" }
   | { kind: "Image" }
   | { kind: "Pdf" };

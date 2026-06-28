@@ -1,4 +1,4 @@
-import type { Status, Hunk } from "./types";
+import type { Status } from "./types";
 
 export function statusColor(s: Status): string {
   switch (s.kind) {
@@ -30,31 +30,8 @@ export function statusLabel(s: Status): string {
   }
 }
 
-export interface Row {
-  tag: Hunk["tag"];
-  hunkId: number;
-  // null = blank (the other side has no corresponding line)
-  a: string | null;
-  b: string | null;
-}
-
-/// Flatten hunks into aligned side-by-side rows for rendering.
-export function hunksToRows(hunks: Hunk[]): Row[] {
-  const rows: Row[] = [];
-  for (const h of hunks) {
-    if (h.tag === "Equal") {
-      rows.push({ tag: "Equal", hunkId: h.id, a: h.a_lines[0] ?? "", b: h.b_lines[0] ?? "" });
-      continue;
-    }
-    const n = Math.max(h.a_lines.length, h.b_lines.length);
-    for (let i = 0; i < n; i++) {
-      rows.push({
-        tag: h.tag,
-        hunkId: h.id,
-        a: i < h.a_lines.length ? h.a_lines[i] : null,
-        b: i < h.b_lines.length ? h.b_lines[i] : null,
-      });
-    }
-  }
-  return rows;
+/// Join a root dir and a relative path (POSIX-style; fine on macOS/Linux).
+export function joinPath(root: string, rel: string): string {
+  if (!root) return rel;
+  return `${root.replace(/\/$/, "")}/${rel}`;
 }

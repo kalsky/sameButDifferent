@@ -3,58 +3,96 @@
   --panel: #161b22;
   --border: #30363d;
   --text: #c9d1d9;
+  --accent: #238636;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 * { box-sizing: border-box; }
-
 body { margin: 0; background: var(--bg); color: var(--text); }
+.app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+.viewhost { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.hidden { display: none; }
 
-.app { display: flex; flex-direction: column; height: 100vh; }
-
-header {
-  display: flex; align-items: center; gap: 16px;
-  padding: 8px 12px; border-bottom: 1px solid var(--border); background: var(--panel);
-}
-
-.picker { display: flex; gap: 8px; align-items: center; flex: 1; }
-.pickbtn { flex: 1; max-width: 260px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 button {
   background: #21262d; color: var(--text); border: 1px solid var(--border);
-  border-radius: 6px; padding: 6px 10px; cursor: pointer;
+  border-radius: 6px; padding: 6px 10px; cursor: pointer; font-size: 13px;
 }
 button:hover { background: #30363d; }
-button:disabled { opacity: 0.5; cursor: default; }
-.compare { background: #238636; border-color: #238636; }
-
-.toggle { font-size: 13px; display: flex; gap: 4px; align-items: center; }
-
-.body { display: flex; flex: 1; min-height: 0; }
-.sidebar { width: 360px; border-right: 1px solid var(--border); overflow: auto; }
-.content { flex: 1; overflow: auto; display: flex; flex-direction: column; }
-
+button:disabled { opacity: 0.45; cursor: default; }
+.compare { background: var(--accent); border-color: var(--accent); }
 .hint { color: #8b949e; padding: 16px; }
 
-.tree { font-size: 13px; }
-.tree .row {
-  display: flex; align-items: center; gap: 6px; padding: 3px 0; cursor: pointer; white-space: nowrap;
-}
-.tree .row:hover { background: #1c2128; }
-.tree .twisty { width: 12px; display: inline-block; color: #8b949e; }
-.tree .name { flex: 1; overflow: hidden; text-overflow: ellipsis; }
-.tree .badge { font-size: 11px; padding-right: 8px; }
+/* ---- Home ---- */
+.home { margin: auto; display: flex; flex-direction: column; align-items: center; gap: 24px; padding: 40px; }
+.home h1 { margin: 0; font-weight: 600; }
+.modeswitch { display: flex; gap: 8px; }
+.modeswitch button.on { background: var(--accent); border-color: var(--accent); }
+.pickrow { display: flex; align-items: center; gap: 14px; }
+.pickbtn { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+.pickbtn.big { min-width: 260px; padding: 14px; }
+.vs { color: #8b949e; }
+.big { font-size: 15px; }
+.compare.big { padding: 12px 28px; }
 
-.filebar {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 6px 12px; border-bottom: 1px solid var(--border); font-family: monospace; font-size: 13px;
+/* ---- Toolbars ---- */
+.toolbar {
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 12px; border-bottom: 1px solid var(--border); background: var(--panel);
+}
+.toolbar .roots { flex: 1; display: flex; gap: 0; }
+.rootlabel {
+  flex: 1; font-family: monospace; font-size: 12px; color: #8b949e;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 8px;
+}
+.toggle { font-size: 13px; display: flex; gap: 4px; align-items: center; }
+
+/* ---- Folder view: aligned two-column tree ---- */
+.folderview, .fileview { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.aligned { flex: 1; overflow: auto; font-size: 13px; }
+.arow {
+  display: grid; grid-template-columns: 1fr 64px 1fr 110px; align-items: center;
+  cursor: pointer; border-bottom: 1px solid #1c2128;
+}
+.arow:hover { background: #1c2128; }
+.acell { display: flex; align-items: center; gap: 6px; padding: 3px 0; white-space: nowrap; overflow: hidden; }
+.acell .name { overflow: hidden; text-overflow: ellipsis; }
+.acell .absent { color: #444c56; padding-left: 8px; }
+.twisty { width: 12px; display: inline-block; color: #8b949e; }
+.arrows { display: flex; justify-content: center; gap: 2px; }
+.arrows button { padding: 0 7px; line-height: 1.5; }
+.abadge { font-size: 11px; text-align: right; padding-right: 10px; }
+
+/* ---- Modal ---- */
+.modalbg { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; }
+.modal { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px; width: 420px; }
+.modal code { background: #0d1117; padding: 1px 5px; border-radius: 4px; }
+.modalbtns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+
+/* ---- File view ---- */
+.filetitle { flex: 1; font-family: monospace; font-size: 13px; overflow: hidden; text-overflow: ellipsis; }
+.save.dirty { border-color: var(--accent); color: #fff; }
+.danger { background: #b62324; border-color: #b62324; color: #fff; }
+
+/* Per-side controls sit above each editor pane (left controls left, right controls right). */
+.sideheaders { display: flex; border-bottom: 1px solid var(--border); background: var(--panel); }
+.sidehead { flex: 1; display: flex; gap: 8px; padding: 6px 12px; }
+.sidehead:last-child { justify-content: flex-end; }
+
+.statusbar {
+  padding: 4px 12px; border-top: 1px solid var(--border); background: var(--panel);
+  font-size: 12px; color: #8b949e;
 }
 
-.diff { display: flex; flex-direction: column; font-family: ui-monospace, monospace; font-size: 12px; }
+/* CodeMirror merge editor fills the file view. The .cm-mergeView root is the scroll
+   container (it has overflowY:auto); bounding its height makes the whole thing scroll. */
+.merge { flex: 1; min-height: 0; overflow: hidden; }
+.merge .cm-mergeView { height: 100%; width: 100%; }
+
+.diff { flex: 1; overflow: auto; display: flex; flex-direction: column; font-family: ui-monospace, monospace; font-size: 12px; }
 .diffrow { display: grid; grid-template-columns: 1fr 48px 1fr; align-items: stretch; }
 .cell { margin: 0; padding: 0 8px; white-space: pre-wrap; word-break: break-all; overflow-x: auto; }
 .chevrons { display: flex; justify-content: center; gap: 2px; align-items: flex-start; }
 .chevrons button { padding: 0 5px; line-height: 1.4; }
-
 .hex { white-space: pre; }
 .images { flex-direction: row; }
 .images img { max-width: 50%; object-fit: contain; padding: 8px; }

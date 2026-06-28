@@ -1,18 +1,16 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
 
 interface Props {
-  relPath: string;
-  rootA: string;
-  rootB: string;
+  pathA: string;
+  pathB: string;
 }
 
 // ponytail: native asset protocol; no base64 round-trip through Rust.
-export function ImageView({ relPath, rootA, rootB }: Props) {
-  const src = (root: string) => convertFileSrc(`${root}/${relPath}`);
+export function ImageView({ pathA, pathB }: Props) {
   return (
     <div className="diff images">
-      <img src={src(rootA)} alt="side A" />
-      <img src={src(rootB)} alt="side B" />
+      <img src={convertFileSrc(pathA)} alt="side A" />
+      <img src={convertFileSrc(pathB)} alt="side B" />
     </div>
   );
 }

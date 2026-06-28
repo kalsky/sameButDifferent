@@ -1,6 +1,6 @@
 use crate::binary::{self, HexPage, Media};
 use crate::compare;
-use crate::diff::{self, FileDiff};
+use crate::diff::FileDiff;
 use crate::model::CompareSession;
 use crate::walk;
 use std::path::Path;
@@ -13,16 +13,23 @@ pub fn scan_session(roots: Vec<String>) -> CompareSession {
     CompareSession { roots, tree }
 }
 
-/// Diff one file across two roots. Returns a text diff, or a binary/image/pdf marker.
+/// Open a file pair (full paths) for the side-by-side view. A missing side reads as
+/// empty (only-in files). Text carries both buffers so the UI edits in memory.
 #[tauri::command]
-pub fn diff_file(rel_path: String, root_a: String, root_b: String) -> Result<FileDiff, String> {
-    // Sniff side A (fall back to B if A is missing, e.g. only-in-B).
-    let bytes = read_either(&root_a, &root_b, &rel_path).map_err(|e| e.to_string())?;
-    match binary::classify(&rel_path, &bytes) {
+pub fn open_file(path_a: String, path_b: String) -> Result<FileDiff, String> {
+    let bytes_a = std::fs::read(&path_a).unwrap_or_default();
+    let bytes_b = std::fs::read(&path_b).unwrap_or_default();
+    // Classify on whichever side actually has bytes (prefer A).
+    let (probe_path, probe_bytes) = if !bytes_a.is_empty() {
+        (&path_a, &bytes_a)
+    } else {
+        (&path_b, &bytes_b)
+    };
+    match binary::classify(probe_path, probe_bytes) {
         Media::Text => {
-            let hunks = diff::diff_file_text(&root_a, &root_b, &rel_path)
-                .map_err(|e| e.to_string())?;
-            Ok(FileDiff::Text { hunks })
+            let a = String::from_utf8_lossy(&bytes_a).into_owned();
+            let b = String::from_utf8_lossy(&bytes_b).into_owned();
+            Ok(FileDiff::Text { a, b })
         }
         Media::Image => Ok(FileDiff::Image),
         Media::Pdf => Ok(FileDiff::Pdf),
@@ -30,50 +37,35 @@ pub fn diff_file(rel_path: String, root_a: String, root_b: String) -> Result<Fil
     }
 }
 
-/// Copy one hunk from `from_root` into `to_root`, write to disk, return the re-diff.
+/// Save one side's buffer to disk (explicit; edits and copies never auto-save).
 #[tauri::command]
-pub fn apply_hunk(
-    rel_path: String,
-    from_root: String,
-    to_root: String,
-    hunk_id: usize,
-) -> Result<Vec<diff::Hunk>, String> {
-    diff::apply_hunk(&from_root, &to_root, &rel_path, hunk_id).map_err(|e| e.to_string())
+pub fn write_text(path: String, content: String) -> Result<(), String> {
+    if let Some(parent) = Path::new(&path).parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    std::fs::write(&path, content).map_err(|e| e.to_string())
 }
 
-/// Whole-file copy (only-in entries / wholesale overwrite).
+/// Whole-file copy in the folder view (add missing / overwrite differing).
 #[tauri::command]
-pub fn copy_file(rel_path: String, from_root: String, to_root: String) -> Result<(), String> {
-    diff::copy_file(&from_root, &to_root, &rel_path).map_err(|e| e.to_string())
+pub fn copy_file(from_path: String, to_path: String) -> Result<(), String> {
+    if let Some(parent) = Path::new(&to_path).parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    std::fs::copy(&from_path, &to_path)
+        .map(|_| ())
+        .map_err(|e| e.to_string())
 }
 
 /// Paged hex dump for one side of a (binary) file.
 #[tauri::command]
-pub fn read_hex(
-    rel_path: String,
-    root: String,
-    offset: usize,
-    len: usize,
-) -> Result<HexPage, String> {
-    let bytes = std::fs::read(Path::new(&root).join(&rel_path)).map_err(|e| e.to_string())?;
+pub fn read_hex(path: String, offset: usize, len: usize) -> Result<HexPage, String> {
+    let bytes = std::fs::read(&path).map_err(|e| e.to_string())?;
     let total = bytes.len();
     let end = (offset + len).min(total);
-    let slice = if offset < total {
-        &bytes[offset..end]
-    } else {
-        &[]
-    };
+    let slice = if offset < total { &bytes[offset..end] } else { &[] };
     Ok(HexPage {
         rows: binary::hex_dump(slice, offset),
         total,
     })
-}
-
-fn read_either(root_a: &str, root_b: &str, rel: &str) -> std::io::Result<Vec<u8>> {
-    let pa = Path::new(root_a).join(rel);
-    if pa.exists() {
-        std::fs::read(pa)
-    } else {
-        std::fs::read(Path::new(root_b).join(rel))
-    }
 }

@@ -12,8 +12,8 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             commands::scan_session,
-            commands::diff_file,
-            commands::apply_hunk,
+            commands::open_file,
+            commands::write_text,
             commands::copy_file,
             commands::read_hex,
         ])
