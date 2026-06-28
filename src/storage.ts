@@ -3,7 +3,41 @@
 
 const EXCLUDES_KEY = "sbd.excludes";
 const RECENTS_KEY = "sbd.recents";
+const THEME_KEY = "sbd.theme";
 const RECENTS_MAX = 12;
+
+export const DEFAULT_THEME = "One Dark";
+
+export function getTheme(): string {
+  return localStorage.getItem(THEME_KEY) || DEFAULT_THEME;
+}
+
+export function setTheme(name: string) {
+  localStorage.setItem(THEME_KEY, name);
+}
+
+// Merge-editor display options.
+export interface MergeOpts {
+  highlightChanges: boolean; // char-level changed-text marks (the underline)
+  showCopy: boolean; // bidirectional per-change copy buttons in the center gutter
+}
+
+const MERGE_KEY = "sbd.merge";
+const DEFAULT_MERGE: MergeOpts = { highlightChanges: true, showCopy: true };
+
+export function getMergeOpts(): MergeOpts {
+  try {
+    const raw = localStorage.getItem(MERGE_KEY);
+    if (raw) return { ...DEFAULT_MERGE, ...JSON.parse(raw) };
+  } catch {
+    /* ignore */
+  }
+  return DEFAULT_MERGE;
+}
+
+export function setMergeOpts(opts: MergeOpts) {
+  localStorage.setItem(MERGE_KEY, JSON.stringify(opts));
+}
 
 export const DEFAULT_EXCLUDES = [
   ".git",
@@ -55,4 +89,15 @@ export function addRecent(mode: Recent["mode"], a: string, b: string): Recent[] 
   const next = [{ mode, a, b, ts: Date.now() }, ...without].slice(0, RECENTS_MAX);
   localStorage.setItem(RECENTS_KEY, JSON.stringify(next));
   return next;
+}
+
+export function removeRecent(r: Recent): Recent[] {
+  const next = getRecents().filter((x) => !(x.mode === r.mode && x.a === r.a && x.b === r.b));
+  localStorage.setItem(RECENTS_KEY, JSON.stringify(next));
+  return next;
+}
+
+export function clearRecents(): Recent[] {
+  localStorage.removeItem(RECENTS_KEY);
+  return [];
 }

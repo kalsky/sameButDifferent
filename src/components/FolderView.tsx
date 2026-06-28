@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Folder, File, ChevronRight, ChevronDown, RefreshCw } from "lucide-react";
 import type { CompareSession, Entry } from "../types";
 import { statusColor, statusLabel, joinPath } from "../format";
 import { copyFile } from "../api";
@@ -51,7 +52,7 @@ export function FolderView({ session, onOpenFile, onBack, onRescan }: Props) {
           <input type="checkbox" checked={diffOnly} onChange={(e) => setDiffOnly(e.target.checked)} />
           differences only
         </label>
-        <button onClick={onRescan} disabled={busy}>↻ Rescan</button>
+        <button onClick={onRescan} disabled={busy}><RefreshCw size={14} /> Rescan</button>
       </div>
 
       <div className="aligned">
@@ -117,12 +118,16 @@ function Node({
       >
         <Cell depth={depth} isDir={isDir} present={presentA} open={open} name={entry.name} color={color} />
         <div className="arrows" onClick={(e) => e.stopPropagation()}>
-          {canAtoB && (
-            <button title="copy → right" onClick={() => onCopy(entry.rel_path, "AtoB")}>›</button>
-          )}
-          {canBtoA && (
-            <button title="copy ← left" onClick={() => onCopy(entry.rel_path, "BtoA")}>‹</button>
-          )}
+          <span className="slot">
+            {canAtoB && (
+              <button title="copy → right" onClick={() => onCopy(entry.rel_path, "AtoB")}>›</button>
+            )}
+          </span>
+          <span className="slot">
+            {canBtoA && (
+              <button title="copy ← left" onClick={() => onCopy(entry.rel_path, "BtoA")}>‹</button>
+            )}
+          </span>
         </div>
         <Cell depth={depth} isDir={isDir} present={presentB} open={open} name={entry.name} color={color} />
         <span className="abadge" style={{ color }}>{statusLabel(entry.status)}</span>
@@ -154,8 +159,10 @@ function Cell({
     <div className="acell" style={{ paddingLeft: depth * 16 + 8 }}>
       {present ? (
         <>
-          <span className="twisty">{isDir ? (open ? "▾" : "▸") : ""}</span>
-          <span>{isDir ? "📁" : "📄"}</span>
+          <span className="twisty">
+            {isDir ? open ? <ChevronDown size={13} /> : <ChevronRight size={13} /> : null}
+          </span>
+          {isDir ? <Folder size={14} color="#54aeff" /> : <File size={14} color="#8b949e" />}
           <span className="name" style={{ color }}>{name}</span>
         </>
       ) : (

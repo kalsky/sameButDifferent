@@ -4,7 +4,19 @@ import "./App.css";
 import type { CompareSession } from "./types";
 import { scanSession } from "./api";
 import { joinPath } from "./format";
-import { getExcludes, getRecents, addRecent, type Recent } from "./storage";
+import {
+  getExcludes,
+  getRecents,
+  addRecent,
+  removeRecent,
+  clearRecents,
+  getTheme,
+  setTheme,
+  getMergeOpts,
+  setMergeOpts,
+  type Recent,
+  type MergeOpts,
+} from "./storage";
 import { HomeView } from "./components/HomeView";
 import { FolderView } from "./components/FolderView";
 import { FileView } from "./components/FileView";
@@ -34,6 +46,8 @@ function App() {
   const [confirm, setConfirm] = useState<Confirm | null>(null);
   const [excludes, setExcludesState] = useState<string[]>(getExcludes);
   const [recents, setRecents] = useState<Recent[]>(getRecents);
+  const [theme, setThemeState] = useState<string>(getTheme);
+  const [mergeOpts, setMergeOptsState] = useState<MergeOpts>(getMergeOpts);
   const [showSettings, setShowSettings] = useState(false);
   const unsavedRef = useRef(false);
 
@@ -121,6 +135,8 @@ function App() {
           onCompareFiles={compareFiles}
           recents={recents}
           onPick={pickRecent}
+          onRemoveRecent={(r) => setRecents(removeRecent(r))}
+          onClearRecents={() => setRecents(clearRecents())}
           onOpenSettings={() => setShowSettings(true)}
         />
       )}
@@ -143,6 +159,8 @@ function App() {
             pathA={file.pathA}
             pathB={file.pathB}
             title={file.title}
+            theme={theme}
+            mergeOpts={mergeOpts}
             onBack={leaveFile}
             onDirtyChange={setDirty}
           />
@@ -152,10 +170,20 @@ function App() {
       {showSettings && (
         <SettingsModal
           excludes={excludes}
+          theme={theme}
           onClose={() => setShowSettings(false)}
           onSave={(list) => {
             setExcludesState(list);
             setShowSettings(false);
+          }}
+          onThemeChange={(name) => {
+            setTheme(name);
+            setThemeState(name);
+          }}
+          mergeOpts={mergeOpts}
+          onMergeOptsChange={(o) => {
+            setMergeOpts(o);
+            setMergeOptsState(o);
           }}
         />
       )}

@@ -16,6 +16,7 @@ body { margin: 0; background: var(--bg); color: var(--text); }
 button {
   background: #21262d; color: var(--text); border: 1px solid var(--border);
   border-radius: 6px; padding: 6px 10px; cursor: pointer; font-size: 13px;
+  display: inline-flex; align-items: center; gap: 5px;
 }
 button:hover { background: #30363d; }
 button:disabled { opacity: 0.45; cursor: default; }
@@ -27,13 +28,32 @@ button:disabled { opacity: 0.45; cursor: default; }
 .home h1 { margin: 0; font-weight: 600; }
 .settingsbtn { position: fixed; top: 12px; right: 12px; font-size: 16px; padding: 4px 9px; }
 
-.recents { width: 520px; max-width: 90vw; }
+.recents { width: 640px; max-width: 92vw; }
+.recentshead { display: flex; align-items: center; justify-content: space-between; }
 .recents h3 { color: #8b949e; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 8px; }
-.recent { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; margin-bottom: 6px; }
-.recpair { font-size: 13px; }
-.recpath { flex: 1; text-align: right; color: #6e7681; font-size: 11px; font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.link { background: none; border: none; color: #58a6ff; padding: 0; font-size: 12px; }
+.link:hover { background: none; text-decoration: underline; }
+.recent { display: flex; align-items: stretch; gap: 4px; margin-bottom: 6px; }
+.recopen { flex: 1; display: flex; align-items: center; gap: 10px; text-align: left; min-width: 0; }
+.recicon { flex-shrink: 0; display: flex; }
+.recdel { padding: 6px 8px; flex-shrink: 0; }
+.recpair { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 
-.modal.wide { width: 520px; }
+.modal.wide { width: 560px; max-height: 86vh; overflow-y: auto; }
+.modal h3 { margin: 0 0 8px; font-size: 14px; }
+.themepick select {
+  background: #0d1117; color: var(--text); border: 1px solid var(--border);
+  border-radius: 6px; padding: 6px 8px; font-size: 13px; width: 100%;
+}
+.themepreview { margin-top: 10px; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.themepreview .cm-editor { max-height: 180px; }
+
+.setrow { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 13px; }
+.setrow span { flex: 1; }
+.setrow select {
+  background: #0d1117; color: var(--text); border: 1px solid var(--border);
+  border-radius: 6px; padding: 5px 8px; font-size: 13px;
+}
 .muted { color: #8b949e; font-size: 12px; margin: 4px 0 10px; }
 .excludes {
   width: 100%; height: 220px; resize: vertical; box-sizing: border-box;
@@ -54,10 +74,13 @@ button:disabled { opacity: 0.45; cursor: default; }
   display: flex; align-items: center; gap: 12px;
   padding: 8px 12px; border-bottom: 1px solid var(--border); background: var(--panel);
 }
-.toolbar .roots { flex: 1; display: flex; gap: 0; }
+.toolbar { flex-wrap: nowrap; }
+.toolbar > button { flex-shrink: 0; }
+.toolbar .toggle { flex-shrink: 0; }
+.toolbar .roots { flex: 1; min-width: 0; display: flex; gap: 0; }
 .rootlabel {
-  flex: 1; font-family: monospace; font-size: 12px; color: #8b949e;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 8px;
+  flex: 1; min-width: 0; font-family: monospace; font-size: 12px; color: #8b949e;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 8px; direction: rtl; text-align: left;
 }
 .toggle { font-size: 13px; display: flex; gap: 4px; align-items: center; }
 
@@ -73,7 +96,8 @@ button:disabled { opacity: 0.45; cursor: default; }
 .acell .name { overflow: hidden; text-overflow: ellipsis; }
 .acell .absent { color: #444c56; padding-left: 8px; }
 .twisty { width: 12px; display: inline-block; color: #8b949e; }
-.arrows { display: flex; justify-content: center; gap: 2px; }
+.arrows { display: grid; grid-template-columns: 1fr 1fr; }
+.slot { display: flex; justify-content: center; }
 .arrows button { padding: 0 7px; line-height: 1.5; }
 .abadge { font-size: 11px; text-align: right; padding-right: 10px; }
 
@@ -98,10 +122,38 @@ button:disabled { opacity: 0.45; cursor: default; }
   font-size: 12px; color: #8b949e;
 }
 
-/* CodeMirror merge editor fills the file view. The .cm-mergeView root is the scroll
-   container (it has overflowY:auto); bounding its height makes the whole thing scroll. */
-.merge { flex: 1; min-height: 0; overflow: hidden; }
+/* Editor + diff minimap side by side, filling the file view. */
+.mergewrap { flex: 1; min-height: 0; }
+.merge { flex: 1; min-width: 0; overflow: hidden; }
 .merge .cm-mergeView { height: 100%; width: 100%; }
+
+.diffnav { display: flex; gap: 4px; }
+.diffnav button { padding: 4px 8px; display: flex; align-items: center; }
+
+/* Replace CodeMirror-merge's underline on changed text with a flat tint (less noisy,
+   especially on whitespace). */
+.cm-changedText,
+.cm-deletedChunk .cm-deletedText {
+  background: rgba(210, 153, 34, 0.22) !important;
+}
+
+/* Custom bidirectional copy gutter on editor B (at the center divider). */
+.cm-copygutter { background: #0d1117; }
+.cm-copybtns { display: flex; gap: 1px; align-items: center; height: 100%; }
+.cm-copybtns button {
+  font-size: 11px; line-height: 1; padding: 1px 3px;
+  background: #21262d; color: #58a6ff; border: 1px solid var(--border);
+  border-radius: 3px; cursor: pointer; display: inline-flex; align-items: center;
+}
+.cm-copybtns button:hover { background: #1f6feb; color: #fff; }
+
+/* Minimap: thin column with a tick per difference block; click to jump. */
+.minimap { position: relative; width: 14px; background: #0a0d12; border-left: 1px solid var(--border); flex-shrink: 0; }
+.tick {
+  position: absolute; left: 2px; right: 2px; height: 4px; padding: 0;
+  background: #d29922; border: none; border-radius: 1px; cursor: pointer;
+}
+.tick:hover { background: #f0b429; }
 
 .diff { flex: 1; overflow: auto; display: flex; flex-direction: column; font-family: ui-monospace, monospace; font-size: 12px; }
 .diffrow { display: grid; grid-template-columns: 1fr 48px 1fr; align-items: stretch; }

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
+import { Settings, Folder, File, X } from "lucide-react";
 import type { Recent } from "../storage";
 
 interface Props {
@@ -7,6 +8,8 @@ interface Props {
   onCompareFiles: (a: string, b: string) => void;
   recents: Recent[];
   onPick: (r: Recent) => void;
+  onRemoveRecent: (r: Recent) => void;
+  onClearRecents: () => void;
   onOpenSettings: () => void;
 }
 
@@ -15,7 +18,15 @@ type Mode = "folders" | "files";
 const basename = (p: string) => p.replace(/\/$/, "").split("/").pop() || p;
 
 // Launch screen: pick two folders or two files to compare. Array-ish so 3-way slots in later.
-export function HomeView({ onCompareFolders, onCompareFiles, recents, onPick, onOpenSettings }: Props) {
+export function HomeView({
+  onCompareFolders,
+  onCompareFiles,
+  recents,
+  onPick,
+  onRemoveRecent,
+  onClearRecents,
+  onOpenSettings,
+}: Props) {
   const [mode, setMode] = useState<Mode>("folders");
   const [a, setA] = useState("");
   const [b, setB] = useState("");
@@ -30,14 +41,14 @@ export function HomeView({ onCompareFolders, onCompareFiles, recents, onPick, on
 
   return (
     <div className="home">
-      <button className="settingsbtn" title="Settings" onClick={onOpenSettings}>⚙</button>
+      <button className="settingsbtn" title="Settings" onClick={onOpenSettings}><Settings size={16} /></button>
       <h1>Same But Different</h1>
       <div className="modeswitch">
         <button className={mode === "folders" ? "on" : ""} onClick={() => setMode("folders")}>
-          📁 Compare Folders
+          <Folder size={15} /> Compare Folders
         </button>
         <button className={mode === "files" ? "on" : ""} onClick={() => setMode("files")}>
-          📄 Compare Files
+          <File size={15} /> Compare Files
         </button>
       </div>
 
@@ -57,15 +68,24 @@ export function HomeView({ onCompareFolders, onCompareFiles, recents, onPick, on
 
       {recents.length > 0 && (
         <div className="recents">
-          <h3>Recent</h3>
+          <div className="recentshead">
+            <h3>Recent</h3>
+            <button className="link" onClick={onClearRecents}>Clear all</button>
+          </div>
           {recents.map((r, i) => (
-            <button key={i} className="recent" onClick={() => onPick(r)}>
-              <span className="recicon">{r.mode === "folders" ? "📁" : "📄"}</span>
-              <span className="recpair">
-                {basename(r.a)} <span className="vs">↔</span> {basename(r.b)}
-              </span>
-              <span className="recpath">{r.a}</span>
-            </button>
+            <div key={i} className="recent">
+              <button className="recopen" title={`${r.a}\n${r.b}`} onClick={() => onPick(r)}>
+                <span className="recicon">
+                  {r.mode === "folders" ? <Folder size={14} color="#54aeff" /> : <File size={14} color="#8b949e" />}
+                </span>
+                <span className="recpair">
+                  {basename(r.a)} <span className="vs">↔</span> {basename(r.b)}
+                </span>
+              </button>
+              <button className="recdel" title="Remove" onClick={() => onRemoveRecent(r)}>
+                <X size={14} />
+              </button>
+            </div>
           ))}
         </div>
       )}
