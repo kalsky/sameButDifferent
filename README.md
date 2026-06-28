@@ -37,12 +37,6 @@ npm run tauri build           # produces a macOS app bundle
   and re-diff. **Binaries** show a hex dump; **images** show side-by-side; **PDF** is
   v1.1.
 
-## Toolchain note
-
-Rust 1.87 (Homebrew) is older than some Tauri transitive deps want, so `Cargo.lock`
-pins `time`, `serde_with`, `darling`, and `plist` to 1.87-compatible versions. Upgrading
-Rust to ≥1.88 lets you drop those pins.
-
 ## Not yet (addable without redesign)
 
 3-way diff UI · PDF rendering · content-based move/rename detection · syntax
