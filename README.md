@@ -24,8 +24,10 @@ npm test                      # frontend helpers (Vitest)
 ## Build
 
 ```bash
-npm run tauri build           # produces a macOS app bundle
+npm run tauri build
 ```
+
+Builds for the **platform you're running on**: macOS (`.app` + `.dmg`), Windows (`.exe` + `.msi`), or Linux (`.deb` + `.AppImage`). GitHub Actions builds all three automatically on every PR to `main` (see [`.github/workflows/release.yml`](.github/workflows/release.yml)).
 
 ## How it works
 
