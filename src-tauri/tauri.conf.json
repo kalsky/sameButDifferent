@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "sameButDifferent",
+  "productName": "SameButDifferent",
   "version": "0.1.0",
   "identifier": "com.kalsky.samebutdifferent",
   "build": {
@@ -12,9 +12,9 @@
   "app": {
     "windows": [
       {
-        "title": "sameButDifferent",
-        "width": 1100,
-        "height": 720,
+        "title": "Same But Different",
+        "width": 1300,
+        "height": 800,
         "minWidth": 700,
         "minHeight": 480,
         "resizable": true

@@ -1,8 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { CompareSession, FileDiff, HexPage } from "./types";
 
-export const scanSession = (roots: string[]) =>
-  invoke<CompareSession>("scan_session", { roots });
+export const scanSession = (roots: string[], excludes: string[]) =>
+  invoke<CompareSession>("scan_session", { roots, excludes });
 
 // File ops take full paths (so the folder view and direct file-pick mode share them).
 export const openFile = (pathA: string, pathB: string) =>

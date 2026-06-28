@@ -4,9 +4,11 @@ import "./App.css";
 import type { CompareSession } from "./types";
 import { scanSession } from "./api";
 import { joinPath } from "./format";
+import { getExcludes, getRecents, addRecent, type Recent } from "./storage";
 import { HomeView } from "./components/HomeView";
 import { FolderView } from "./components/FolderView";
 import { FileView } from "./components/FileView";
+import { SettingsModal } from "./components/SettingsModal";
 
 type View = "home" | "folder" | "file";
 
@@ -30,6 +32,9 @@ function App() {
   const [session, setSession] = useState<CompareSession | null>(null);
   const [file, setFile] = useState<OpenFile | null>(null);
   const [confirm, setConfirm] = useState<Confirm | null>(null);
+  const [excludes, setExcludesState] = useState<string[]>(getExcludes);
+  const [recents, setRecents] = useState<Recent[]>(getRecents);
+  const [showSettings, setShowSettings] = useState(false);
   const unsavedRef = useRef(false);
 
   const setDirty = useCallback((d: boolean) => {
@@ -57,13 +62,20 @@ function App() {
   }, []);
 
   async function compareFolders(a: string, b: string) {
-    setSession(await scanSession([a, b]));
+    setRecents(addRecent("folders", a, b));
+    setSession(await scanSession([a, b], excludes));
     setView("folder");
   }
 
   function compareFiles(a: string, b: string) {
+    setRecents(addRecent("files", a, b));
     setFile({ pathA: a, pathB: b, title: `${basename(a)} ↔ ${basename(b)}`, returnTo: "home" });
     setView("file");
+  }
+
+  function pickRecent(r: Recent) {
+    if (r.mode === "folders") compareFolders(r.a, r.b);
+    else compareFiles(r.a, r.b);
   }
 
   function openFromFolder(rel: string) {
@@ -96,7 +108,7 @@ function App() {
   }
 
   async function rescan() {
-    if (session) setSession(await scanSession(session.roots));
+    if (session) setSession(await scanSession(session.roots, excludes));
   }
 
   const folderActive = view === "folder";
@@ -104,7 +116,13 @@ function App() {
   return (
     <div className="app">
       {view === "home" && (
-        <HomeView onCompareFolders={compareFolders} onCompareFiles={compareFiles} />
+        <HomeView
+          onCompareFolders={compareFolders}
+          onCompareFiles={compareFiles}
+          recents={recents}
+          onPick={pickRecent}
+          onOpenSettings={() => setShowSettings(true)}
+        />
       )}
 
       {/* FolderView stays mounted while drilling into files so its filter/expansion/scroll persist. */}
@@ -129,6 +147,17 @@ function App() {
             onDirtyChange={setDirty}
           />
         </div>
+      )}
+
+      {showSettings && (
+        <SettingsModal
+          excludes={excludes}
+          onClose={() => setShowSettings(false)}
+          onSave={(list) => {
+            setExcludesState(list);
+            setShowSettings(false);
+          }}
+        />
       )}
 
       {confirm && (

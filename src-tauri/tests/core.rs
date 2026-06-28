@@ -70,10 +70,13 @@ fn walk_merge_and_statuses() {
     write(a.path(), "conf", "i am a file\n");
     write(b.path(), "conf/inner.txt", "i am a dir\n");
 
-    let session = scan_session(vec![
-        a.path().to_string_lossy().to_string(),
-        b.path().to_string_lossy().to_string(),
-    ]);
+    let session = scan_session(
+        vec![
+            a.path().to_string_lossy().to_string(),
+            b.path().to_string_lossy().to_string(),
+        ],
+        vec![],
+    );
 
     assert_eq!(find(&session.tree, "same.txt").unwrap().status, Status::Same);
     assert_eq!(
@@ -129,10 +132,13 @@ fn compare_ladder() {
     write(a.path(), "f4", "abcd\n");
     write(b.path(), "f4", "abcdefgh\n");
 
-    let s = scan_session(vec![
-        a.path().to_string_lossy().to_string(),
-        b.path().to_string_lossy().to_string(),
-    ]);
+    let s = scan_session(
+        vec![
+            a.path().to_string_lossy().to_string(),
+            b.path().to_string_lossy().to_string(),
+        ],
+        vec![],
+    );
 
     let f1 = find(&s.tree, "f1").unwrap();
     assert_eq!(f1.status, Status::Same);
@@ -225,15 +231,39 @@ fn three_side_readiness() {
     write(b.path(), "f", "x\n");
     // missing on C => Partial (present on 2 of 3)
 
-    let s = scan_session(vec![
-        a.path().to_string_lossy().to_string(),
-        b.path().to_string_lossy().to_string(),
-        c.path().to_string_lossy().to_string(),
-    ]);
+    let s = scan_session(
+        vec![
+            a.path().to_string_lossy().to_string(),
+            b.path().to_string_lossy().to_string(),
+            c.path().to_string_lossy().to_string(),
+        ],
+        vec![],
+    );
     let f = find(&s.tree, "f").unwrap();
     assert_eq!(f.sides.len(), 3);
     assert_eq!(f.status, Status::Partial);
     assert_eq!(s.roots.len(), 3);
+}
+
+// 9. excludes prune matching dirs (and their subtrees) from the walk.
+#[test]
+fn excludes_prune_dirs() {
+    let a = TempDir::new().unwrap();
+    let b = TempDir::new().unwrap();
+    write(a.path(), "keep.txt", "x\n");
+    write(a.path(), "node_modules/dep.js", "junk\n");
+    write(b.path(), "keep.txt", "x\n");
+
+    let s = scan_session(
+        vec![
+            a.path().to_string_lossy().to_string(),
+            b.path().to_string_lossy().to_string(),
+        ],
+        vec!["node_modules".to_string()],
+    );
+    assert!(find(&s.tree, "keep.txt").is_some());
+    assert!(find(&s.tree, "node_modules").is_none());
+    assert!(find(&s.tree, "node_modules/dep.js").is_none());
 }
 
 // keep EntryKind import used even if assertions above change

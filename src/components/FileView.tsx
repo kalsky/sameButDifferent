@@ -2,10 +2,25 @@ import { useEffect, useRef, useState } from "react";
 import { MergeView } from "@codemirror/merge";
 import { EditorView, basicSetup } from "codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
+import { LanguageDescription } from "@codemirror/language";
+import { languages } from "@codemirror/language-data";
+import type { Extension } from "@codemirror/state";
 import type { FileDiff } from "../types";
 import { openFile, writeText } from "../api";
 import { HexView } from "./HexView";
 import { ImageView } from "./ImageView";
+
+// Pick + lazily load a syntax-highlighting extension from the file's name. [] if unknown.
+async function loadLanguage(path: string): Promise<Extension> {
+  const name = path.split("/").pop() || "";
+  const desc = LanguageDescription.matchFilename(languages, name);
+  if (!desc) return [];
+  try {
+    return await desc.load();
+  } catch {
+    return [];
+  }
+}
 
 interface Props {
   pathA: string;
@@ -42,10 +57,12 @@ export function FileView({ pathA, pathB, title, onBack, onDirtyChange }: Props) 
     merge.current?.destroy();
     merge.current = null;
 
-    openFile(pathA, pathB).then((fd) => {
+    openFile(pathA, pathB).then(async (fd) => {
       if (!live) return;
       setKind(fd.kind);
       if (fd.kind === "Text" && host.current) {
+        const lang = await loadLanguage(pathA || pathB);
+        if (!live || !host.current) return;
         const mark = (side: "A" | "B") =>
           EditorView.updateListener.of((u) => {
             if (u.docChanged) {
@@ -55,8 +72,8 @@ export function FileView({ pathA, pathB, title, onBack, onDirtyChange }: Props) 
           });
         merge.current = new MergeView({
           // No collapseUnchanged: always show full file content (incl. identical files).
-          a: { doc: fd.a, extensions: [basicSetup, oneDark, mark("A")] },
-          b: { doc: fd.b, extensions: [basicSetup, oneDark, mark("B")] },
+          a: { doc: fd.a, extensions: [basicSetup, oneDark, lang, mark("A")] },
+          b: { doc: fd.b, extensions: [basicSetup, oneDark, lang, mark("B")] },
           parent: host.current,
         });
         recomputeStatus();

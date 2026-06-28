@@ -7,8 +7,8 @@ use std::path::Path;
 
 /// Walk N roots, merge by rel_path, and resolve every entry's status.
 #[tauri::command]
-pub fn scan_session(roots: Vec<String>) -> CompareSession {
-    let mut tree = walk::build_tree(&roots);
+pub fn scan_session(roots: Vec<String>, excludes: Vec<String>) -> CompareSession {
+    let mut tree = walk::build_tree(&roots, &excludes);
     compare::resolve_statuses(&roots, &mut tree);
     CompareSession { roots, tree }
 }

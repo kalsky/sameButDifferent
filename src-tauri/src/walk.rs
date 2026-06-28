@@ -12,10 +12,16 @@ struct RawInfo {
     mtime: i64,
 }
 
-/// Walk one root, returning rel_path -> RawInfo. Respects .gitignore (ignore crate default).
-fn scan_root(root: &Path) -> BTreeMap<String, RawInfo> {
+/// Walk one root, returning rel_path -> RawInfo. Respects .gitignore (ignore crate
+/// default). Any entry whose file name is in `excludes` is skipped, along with its
+/// descendants (so excluding "node_modules" prunes the whole subtree).
+fn scan_root(root: &Path, excludes: &[String]) -> BTreeMap<String, RawInfo> {
     let mut map = BTreeMap::new();
-    let walker = WalkBuilder::new(root).hidden(false).build();
+    let skip: std::collections::HashSet<String> = excludes.iter().cloned().collect();
+    let walker = WalkBuilder::new(root)
+        .hidden(false)
+        .filter_entry(move |dent| !skip.contains(dent.file_name().to_string_lossy().as_ref()))
+        .build();
     for result in walker {
         let dent = match result {
             Ok(d) => d,
@@ -58,10 +64,10 @@ fn scan_root(root: &Path) -> BTreeMap<String, RawInfo> {
 
 /// Build the merged Entry tree from N roots. Statuses are left as a placeholder
 /// (Same) here; `compare::resolve_statuses` fills them in afterward.
-pub fn build_tree(roots: &[String]) -> Vec<Entry> {
+pub fn build_tree(roots: &[String], excludes: &[String]) -> Vec<Entry> {
     let maps: Vec<BTreeMap<String, RawInfo>> = roots
         .iter()
-        .map(|r| scan_root(Path::new(r)))
+        .map(|r| scan_root(Path::new(r), excludes))
         .collect();
 
     // Union of all rel_paths across all roots, sorted (BTreeMap keys already sorted).
