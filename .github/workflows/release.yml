@@ -64,7 +64,7 @@ jobs:
           security default-keychain -s ~/Library/Keychains/build.keychain
           security unlock-keychain -p "" ~/Library/Keychains/build.keychain
           security set-key-partition-list -S apple-tool:,apple: -s -k "" ~/Library/Keychains/build.keychain
-          security find-identity -v -p codesigning ~/Library/Keychains/build.keychain
+          echo "Imported signing certificate into temporary keychain"
 
       - name: Store App Store Connect credentials
         if: matrix.os == 'macos-latest'
@@ -107,5 +107,5 @@ jobs:
           releaseName: "Manual Release (Run #${{ github.run_number }})"
           releaseDraft: true
           prerelease: false
-          releaseAssetNamePattern: "[name]-[version]-[platform]-[arch]-[bundle][ext]"
+          assetNamePattern: "[name]-[version]-[platform]-[arch]-[bundle][ext]"
 
