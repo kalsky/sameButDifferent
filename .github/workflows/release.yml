@@ -68,6 +68,29 @@ jobs:
           echo "${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}" | base64 --decode > /tmp/AuthKey.p8
           xcrun notarytool store-credentials "ac-credentials" --key /tmp/AuthKey.p8 --key-id "${{ secrets.APP_STORE_CONNECT_KEY_ID }}" --issuer "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}"
 
+      - name: Configure macOS signing values
+        if: runner.os == 'macos-latest'
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_PROVIDER_SHORT_NAME: ${{ secrets.APPLE_PROVIDER_SHORT_NAME }}
+        run: |
+          if [ -z "$APPLE_SIGNING_IDENTITY" ] || [ -z "$APPLE_PROVIDER_SHORT_NAME" ]; then
+            echo "APPLE_SIGNING_IDENTITY and APPLE_PROVIDER_SHORT_NAME secrets are required for macOS signing" >&2
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path("src-tauri/tauri.conf.json")
+          data = json.loads(path.read_text())
+          data["bundle"]["macOS"]["signingIdentity"] = os.environ["APPLE_SIGNING_IDENTITY"]
+          data["bundle"]["macOS"]["providerShortName"] = os.environ["APPLE_PROVIDER_SHORT_NAME"]
+          path.write_text(json.dumps(data, indent=2) + "\n")
+          PY
+
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0.6.2
         env:
