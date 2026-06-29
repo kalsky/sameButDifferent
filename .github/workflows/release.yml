@@ -53,7 +53,7 @@ jobs:
         run: cargo test --manifest-path src-tauri/Cargo.toml
 
       - name: Import Apple signing certificate
-        if: runner.os == 'macos-latest'
+        if: matrix.os == 'macos-latest'
         run: |
           echo "${{ secrets.APPLE_CERT_P12_BASE64 }}" | base64 --decode > /tmp/apple-cert.p12
           security create-keychain -p "" build.keychain
@@ -63,13 +63,13 @@ jobs:
           security unlock-keychain -p "" ~/Library/Keychains/build.keychain
 
       - name: Store App Store Connect credentials
-        if: runner.os == 'macos-latest'
+        if: matrix.os == 'macos-latest'
         run: |
           echo "${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}" | base64 --decode > /tmp/AuthKey.p8
           xcrun notarytool store-credentials "ac-credentials" --key /tmp/AuthKey.p8 --key-id "${{ secrets.APP_STORE_CONNECT_KEY_ID }}" --issuer "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}"
 
       - name: Configure macOS signing values
-        if: runner.os == 'macos-latest'
+        if: matrix.os == 'macos-latest'
         env:
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
           APPLE_PROVIDER_SHORT_NAME: ${{ secrets.APPLE_PROVIDER_SHORT_NAME }}
