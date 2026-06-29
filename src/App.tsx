@@ -49,6 +49,10 @@ function App() {
   const [theme, setThemeState] = useState<string>(getTheme);
   const [mergeOpts, setMergeOptsState] = useState<MergeOpts>(getMergeOpts);
   const [showSettings, setShowSettings] = useState(false);
+  // pendingScan: set synchronously on button click so the spinner renders before the scan starts.
+  // The effect below picks it up after paint and runs the actual Tauri call.
+  const [pendingScan, setPendingScan] = useState<{ roots: string[]; excludes: string[] } | null>(null);
+  const scanning = pendingScan !== null;
   const unsavedRef = useRef(false);
 
   const setDirty = useCallback((d: boolean) => {
@@ -75,10 +79,9 @@ function App() {
     };
   }, []);
 
-  async function compareFolders(a: string, b: string) {
+  function compareFolders(a: string, b: string) {
     setRecents(addRecent("folders", a, b));
-    setSession(await scanSession([a, b], excludes));
-    setView("folder");
+    setPendingScan({ roots: [a, b], excludes });
   }
 
   function compareFiles(a: string, b: string) {
@@ -121,15 +124,35 @@ function App() {
     }
   }
 
-  async function rescan() {
-    if (session) setSession(await scanSession(session.roots, excludes));
+  function rescan() {
+    if (!session) return;
+    setPendingScan({ roots: session.roots, excludes });
   }
+
+  useEffect(() => {
+    if (!pendingScan) return;
+    const t = setTimeout(() => {
+      scanSession(pendingScan.roots, pendingScan.excludes).then((s) => {
+        setSession(s);
+        setView("folder");
+        setPendingScan(null);
+      });
+    }, 50);
+    return () => clearTimeout(t);
+  }, [pendingScan]);
 
   const folderActive = view === "folder";
 
   return (
     <div className="app">
-      {view === "home" && (
+      {scanning && (
+        <div className="scanning">
+          <span className="spinner" />
+          Scanning…
+        </div>
+      )}
+
+      {!scanning && view === "home" && (
         <HomeView
           onCompareFolders={compareFolders}
           onCompareFiles={compareFiles}
@@ -142,7 +165,7 @@ function App() {
       )}
 
       {/* FolderView stays mounted while drilling into files so its filter/expansion/scroll persist. */}
-      {session && (
+      {!scanning && session && (
         <div className={"viewhost" + (folderActive ? "" : " hidden")}>
           <FolderView
             session={session}

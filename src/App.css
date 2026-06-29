@@ -23,6 +23,18 @@ button:disabled { opacity: 0.45; cursor: default; }
 .compare { background: var(--accent); border-color: var(--accent); }
 .hint { color: #8b949e; padding: 16px; }
 
+/* ---- Scanning overlay ---- */
+.scanning {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  gap: 12px; font-size: 15px; color: #8b949e;
+}
+.spinner {
+  display: inline-block; width: 20px; height: 20px; border-radius: 50%;
+  border: 2px solid var(--border); border-top-color: #58a6ff;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
 /* ---- Home ---- */
 .home { margin: auto; display: flex; flex-direction: column; align-items: center; gap: 24px; padding: 40px; position: relative; }
 .home h1 { margin: 0; font-weight: 600; }
