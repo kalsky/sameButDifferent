@@ -37,6 +37,11 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "macos": {
+      "signingIdentity": "Developer ID Application: Your Name (TEAMID)",
+      "hardenedRuntime": true,
+      "providerShortName": "YOUR_PROVIDER_SHORT_NAME"
+    }
   }
 }
