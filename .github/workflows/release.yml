@@ -65,6 +65,8 @@ jobs:
           security unlock-keychain -p "" ~/Library/Keychains/build.keychain
           security set-key-partition-list -S apple-tool:,apple: -s -k "" ~/Library/Keychains/build.keychain
           echo "Imported signing certificate into temporary keychain"
+          echo "Identities available for codesign:"
+          security find-identity -v -p codesigning ~/Library/Keychains/build.keychain
 
       - name: Store App Store Connect credentials
         if: matrix.os == 'macos-latest'
