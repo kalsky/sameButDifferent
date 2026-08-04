@@ -266,6 +266,28 @@ fn excludes_prune_dirs() {
     assert!(find(&s.tree, "node_modules/dep.js").is_none());
 }
 
+// 10. glob excludes match file names, including files present on only one side.
+#[test]
+fn excludes_match_globs() {
+    let a = TempDir::new().unwrap();
+    let b = TempDir::new().unwrap();
+    write(a.path(), "keep.txt", "x\n");
+    write(a.path(), "README.md", "only on a\n");
+    write(a.path(), "docs/notes.md", "nested\n");
+    write(b.path(), "keep.txt", "x\n");
+
+    let s = scan_session(
+        vec![
+            a.path().to_string_lossy().to_string(),
+            b.path().to_string_lossy().to_string(),
+        ],
+        vec!["*.md".to_string()],
+    );
+    assert!(find(&s.tree, "keep.txt").is_some());
+    assert!(find(&s.tree, "README.md").is_none());
+    assert!(find(&s.tree, "docs/notes.md").is_none());
+}
+
 // keep EntryKind import used even if assertions above change
 #[allow(dead_code)]
 fn _kind_used(_k: EntryKind) {}

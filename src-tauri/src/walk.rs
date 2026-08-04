@@ -1,4 +1,5 @@
 use crate::model::{Entry, EntryKind, SideInfo, Status};
+use globset::{Glob, GlobSet, GlobSetBuilder};
 use ignore::WalkBuilder;
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -12,15 +13,32 @@ struct RawInfo {
     mtime: i64,
 }
 
+/// Build a matcher for the exclude patterns. Each pattern is matched against an
+/// entry's file name, so plain names ("node_modules") and globs ("*.md") both work.
+/// Invalid patterns are dropped rather than failing the whole scan.
+fn exclude_matcher(excludes: &[String]) -> GlobSet {
+    let mut builder = GlobSetBuilder::new();
+    for pat in excludes {
+        let pat = pat.trim();
+        if pat.is_empty() {
+            continue;
+        }
+        if let Ok(g) = Glob::new(pat) {
+            builder.add(g);
+        }
+    }
+    builder.build().unwrap_or_else(|_| GlobSet::empty())
+}
+
 /// Walk one root, returning rel_path -> RawInfo. Respects .gitignore (ignore crate
-/// default). Any entry whose file name is in `excludes` is skipped, along with its
+/// default). Any entry whose file name matches `excludes` is skipped, along with its
 /// descendants (so excluding "node_modules" prunes the whole subtree).
 fn scan_root(root: &Path, excludes: &[String]) -> BTreeMap<String, RawInfo> {
     let mut map = BTreeMap::new();
-    let skip: std::collections::HashSet<String> = excludes.iter().cloned().collect();
+    let skip = exclude_matcher(excludes);
     let walker = WalkBuilder::new(root)
         .hidden(false)
-        .filter_entry(move |dent| !skip.contains(dent.file_name().to_string_lossy().as_ref()))
+        .filter_entry(move |dent| !skip.is_match(dent.file_name()))
         .build();
     for result in walker {
         let dent = match result {
