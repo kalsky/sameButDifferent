@@ -13,6 +13,7 @@ import { openFile, writeText } from "../api";
 import { themeExt } from "../themes";
 import { HexView } from "./HexView";
 import { ImageView } from "./ImageView";
+import { PdfView } from "./PdfView";
 
 // A change block, in character offsets on each side.
 interface ChunkPos {
@@ -283,7 +284,7 @@ export function FileView({ pathA, pathB, title, theme, mergeOpts, onBack, onDirt
 
       {kind === "Binary" && <HexView pathA={pathA} pathB={pathB} />}
       {kind === "Image" && <ImageView pathA={pathA} pathB={pathB} />}
-      {kind === "Pdf" && <p className="hint">PDF compare coming in v1.1 — files differ.</p>}
+      {kind === "Pdf" && <PdfView pathA={pathA} pathB={pathB} />}
 
       {kind === "Text" && <div className="statusbar">{status}</div>}
     </div>

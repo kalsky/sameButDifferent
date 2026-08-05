@@ -175,3 +175,7 @@ button:disabled { opacity: 0.45; cursor: default; }
 .hex { white-space: pre; }
 .images { flex-direction: row; }
 .images img { max-width: 50%; object-fit: contain; padding: 8px; }
+/* PDFs: each iframe scrolls itself, so the row must not also scroll. */
+.pdfs { flex-direction: row; overflow: hidden; }
+.pdfs iframe { flex: 1; min-width: 0; border: 0; border-left: 1px solid #1c2128; }
+.pdfs iframe:first-child { border-left: 0; }

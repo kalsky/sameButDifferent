@@ -347,3 +347,34 @@ fn gitignore_is_per_side() {
     let secret = find(&s.tree, "secret.txt").expect("B's copy should be present");
     assert_eq!(secret.status, Status::OnlyIn(1));
 }
+
+// 13. atomic writes: no temp files left behind, and a failed write spares the original.
+#[test]
+fn atomic_write_leaves_no_debris() {
+    let d = TempDir::new().unwrap();
+    write(d.path(), "f.txt", "original\n");
+
+    write_text(p(d.path(), "f.txt"), "replaced\n".to_string()).unwrap();
+    assert_eq!(fs::read_to_string(d.path().join("f.txt")).unwrap(), "replaced\n");
+
+    // copy_file into a nested (not yet existing) dir, then over an existing file
+    write(d.path(), "src.txt", "fresh\n");
+    copy_file(p(d.path(), "src.txt"), p(d.path(), "sub/out.txt")).unwrap();
+    copy_file(p(d.path(), "src.txt"), p(d.path(), "f.txt")).unwrap();
+    assert_eq!(fs::read_to_string(d.path().join("sub/out.txt")).unwrap(), "fresh\n");
+    assert_eq!(fs::read_to_string(d.path().join("f.txt")).unwrap(), "fresh\n");
+
+    // the whole point: no .sbd-tmp* debris survives a successful write
+    let leftovers: Vec<_> = fs::read_dir(d.path())
+        .unwrap()
+        .filter_map(|e| e.ok())
+        .map(|e| e.file_name().to_string_lossy().to_string())
+        .filter(|n| n.contains("sbd-tmp"))
+        .collect();
+    assert!(leftovers.is_empty(), "temp files left behind: {leftovers:?}");
+
+    // a copy from a nonexistent source fails without touching the destination
+    let err = copy_file(p(d.path(), "nope.txt"), p(d.path(), "f.txt"));
+    assert!(err.is_err());
+    assert_eq!(fs::read_to_string(d.path().join("f.txt")).unwrap(), "fresh\n");
+}

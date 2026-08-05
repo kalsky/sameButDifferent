@@ -36,9 +36,11 @@ Builds for the **platform you're running on**: macOS (`.app` + `.dmg`), Windows 
 - **Same vs differ** is cheap→expensive: size differs → differ; size+mtime equal →
   assume same (skip read); size equal + mtime differs → hash both (xxhash) and compare.
 - **Text files** diff via the `similar` crate; copy chevrons splice a hunk side-to-side
-  and re-diff. **Binaries** show a hex dump; **images** show side-by-side; **PDF** is
-  v1.1. Text views get syntax highlighting, lazily loaded per language from the file
-  name.
+  and re-diff. **Binaries** show a hex dump; **images** and **PDFs** render side-by-side
+  (PDFs visually, via the webview's own viewer — not a content diff). Text views get
+  syntax highlighting, lazily loaded per language from the file name.
+- **Writes are atomic** — a temp file in the destination directory, then a rename. An
+  interrupted save leaves the original file intact instead of truncated.
 - **What gets skipped** is two things, both in Settings: an exclude list (one name or
   glob per line — `node_modules`, `*.md`; a matching folder prunes its whole subtree),
   and a `.gitignore` toggle, on by default. Excluding happens per-root during the walk,
@@ -46,5 +48,5 @@ Builds for the **platform you're running on**: macOS (`.app` + `.dmg`), Windows 
 
 ## Not yet (addable without redesign)
 
-3-way diff UI · PDF rendering · content-based move/rename detection · atomic writes ·
-bulk folder merge.
+3-way diff UI · PDF *content* diff (text extraction) · content-based move/rename
+detection · bulk folder merge.
