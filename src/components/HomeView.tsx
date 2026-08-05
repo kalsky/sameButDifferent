@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-import { Settings, Folder, File, X } from "lucide-react";
+import { Settings, Folder, File, X, Info } from "lucide-react";
 import type { Recent } from "../storage";
 
 interface Props {
@@ -11,6 +11,7 @@ interface Props {
   onRemoveRecent: (r: Recent) => void;
   onClearRecents: () => void;
   onOpenSettings: () => void;
+  onOpenAbout: () => void;
 }
 
 type Mode = "folders" | "files";
@@ -26,6 +27,7 @@ export function HomeView({
   onRemoveRecent,
   onClearRecents,
   onOpenSettings,
+  onOpenAbout,
 }: Props) {
   const [mode, setMode] = useState<Mode>("folders");
   const [a, setA] = useState("");
@@ -41,6 +43,7 @@ export function HomeView({
 
   return (
     <div className="home">
+      <button className="aboutbtn" title="About" onClick={onOpenAbout}><Info size={16} /></button>
       <button className="settingsbtn" title="Settings" onClick={onOpenSettings}><Settings size={16} /></button>
       <h1>Same But Different</h1>
       <div className="modeswitch">

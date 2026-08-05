@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { listen } from "@tauri-apps/api/event";
 import "./App.css";
 import type { CompareSession } from "./types";
 import { scanSession } from "./api";
@@ -23,6 +24,7 @@ import { HomeView } from "./components/HomeView";
 import { FolderView } from "./components/FolderView";
 import { FileView } from "./components/FileView";
 import { SettingsModal } from "./components/SettingsModal";
+import { AboutModal } from "./components/AboutModal";
 
 type View = "home" | "folder" | "file";
 
@@ -52,6 +54,7 @@ function App() {
   const [theme, setThemeState] = useState<string>(getTheme);
   const [mergeOpts, setMergeOptsState] = useState<MergeOpts>(getMergeOpts);
   const [showSettings, setShowSettings] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
   // pendingScan: set synchronously on button click so the spinner renders before the scan starts.
   // The effect below picks it up after paint and runs the actual Tauri call.
   const [pendingScan, setPendingScan] = useState<{
@@ -81,6 +84,14 @@ function App() {
         });
       }
     });
+    return () => {
+      unlisten.then((f) => f());
+    };
+  }, []);
+
+  // The native menu's About item routes here so it opens the in-app dialog.
+  useEffect(() => {
+    const unlisten = listen("menu:about", () => setShowAbout(true));
     return () => {
       unlisten.then((f) => f());
     };
@@ -168,6 +179,7 @@ function App() {
           onRemoveRecent={(r) => setRecents(removeRecent(r))}
           onClearRecents={() => setRecents(clearRecents())}
           onOpenSettings={() => setShowSettings(true)}
+          onOpenAbout={() => setShowAbout(true)}
         />
       )}
 
@@ -220,6 +232,8 @@ function App() {
           }}
         />
       )}
+
+      {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
 
       {confirm && (
         <div className="modalbg" onClick={() => setConfirm(null)}>

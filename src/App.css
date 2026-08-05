@@ -39,6 +39,7 @@ button:disabled { opacity: 0.45; cursor: default; }
 .home { margin: auto; display: flex; flex-direction: column; align-items: center; gap: 24px; padding: 40px; position: relative; }
 .home h1 { margin: 0; font-weight: 600; }
 .settingsbtn { position: fixed; top: 12px; right: 12px; font-size: 16px; padding: 4px 9px; }
+.aboutbtn { position: fixed; top: 12px; right: 52px; font-size: 16px; padding: 4px 9px; }
 
 .recents { width: 640px; max-width: 92vw; }
 .recentshead { display: flex; align-items: center; justify-content: space-between; }
@@ -175,6 +176,11 @@ button:disabled { opacity: 0.45; cursor: default; }
 .hex { white-space: pre; }
 .images { flex-direction: row; }
 .images img { max-width: 50%; object-fit: contain; padding: 8px; }
+.about { width: 380px; text-align: center; }
+.about .modalbtns { margin-top: 18px; }
+.aboutver { margin: 14px 0 10px; font-family: ui-monospace, monospace; font-size: 12px; }
+.aboutcheck { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 28px; }
+
 /* PDFs: each iframe scrolls itself, so the row must not also scroll. */
 .pdfs { flex-direction: row; overflow: hidden; }
 .pdfs iframe { flex: 1; min-width: 0; border: 0; border-left: 1px solid #1c2128; }
