@@ -6,6 +6,8 @@ import { scanSession } from "./api";
 import { joinPath } from "./format";
 import {
   getExcludes,
+  getUseGitignore,
+  setUseGitignore,
   getRecents,
   addRecent,
   removeRecent,
@@ -45,13 +47,18 @@ function App() {
   const [file, setFile] = useState<OpenFile | null>(null);
   const [confirm, setConfirm] = useState<Confirm | null>(null);
   const [excludes, setExcludesState] = useState<string[]>(getExcludes);
+  const [useGitignore, setUseGitignoreState] = useState<boolean>(getUseGitignore);
   const [recents, setRecents] = useState<Recent[]>(getRecents);
   const [theme, setThemeState] = useState<string>(getTheme);
   const [mergeOpts, setMergeOptsState] = useState<MergeOpts>(getMergeOpts);
   const [showSettings, setShowSettings] = useState(false);
   // pendingScan: set synchronously on button click so the spinner renders before the scan starts.
   // The effect below picks it up after paint and runs the actual Tauri call.
-  const [pendingScan, setPendingScan] = useState<{ roots: string[]; excludes: string[] } | null>(null);
+  const [pendingScan, setPendingScan] = useState<{
+    roots: string[];
+    excludes: string[];
+    useGitignore: boolean;
+  } | null>(null);
   const scanning = pendingScan !== null;
   const unsavedRef = useRef(false);
 
@@ -81,7 +88,7 @@ function App() {
 
   function compareFolders(a: string, b: string) {
     setRecents(addRecent("folders", a, b));
-    setPendingScan({ roots: [a, b], excludes });
+    setPendingScan({ roots: [a, b], excludes, useGitignore });
   }
 
   function compareFiles(a: string, b: string) {
@@ -126,13 +133,13 @@ function App() {
 
   function rescan() {
     if (!session) return;
-    setPendingScan({ roots: session.roots, excludes });
+    setPendingScan({ roots: session.roots, excludes, useGitignore });
   }
 
   useEffect(() => {
     if (!pendingScan) return;
     const t = setTimeout(() => {
-      scanSession(pendingScan.roots, pendingScan.excludes).then((s) => {
+      scanSession(pendingScan.roots, pendingScan.excludes, pendingScan.useGitignore).then((s) => {
         setSession(s);
         setView("folder");
         setPendingScan(null);
@@ -193,10 +200,13 @@ function App() {
       {showSettings && (
         <SettingsModal
           excludes={excludes}
+          useGitignore={useGitignore}
           theme={theme}
           onClose={() => setShowSettings(false)}
-          onSave={(list) => {
+          onSave={(list, gitignore) => {
             setExcludesState(list);
+            setUseGitignore(gitignore);
+            setUseGitignoreState(gitignore);
             setShowSettings(false);
           }}
           onThemeChange={(name) => {

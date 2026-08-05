@@ -6,10 +6,11 @@ import { THEME_NAMES, themeExt } from "../themes";
 
 interface Props {
   excludes: string[];
+  useGitignore: boolean;
   theme: string;
   mergeOpts: MergeOpts;
   onClose: () => void;
-  onSave: (list: string[]) => void;
+  onSave: (list: string[], useGitignore: boolean) => void;
   onThemeChange: (name: string) => void;
   onMergeOptsChange: (o: MergeOpts) => void;
 }
@@ -40,6 +41,7 @@ function ThemePreview({ theme }: { theme: string }) {
 
 export function SettingsModal({
   excludes,
+  useGitignore,
   theme,
   mergeOpts,
   onClose,
@@ -48,6 +50,7 @@ export function SettingsModal({
   onMergeOptsChange,
 }: Props) {
   const [text, setText] = useState(excludes.join("\n"));
+  const [gitignore, setGitignore] = useState(useGitignore);
 
   function parse(t: string) {
     return t.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
@@ -85,9 +88,17 @@ export function SettingsModal({
         </label>
 
         <h3 style={{ marginTop: 20 }}>Exclude from comparison</h3>
+        <label className="setrow">
+          <input
+            type="checkbox"
+            checked={gitignore}
+            onChange={(e) => setGitignore(e.target.checked)}
+          />
+          Respect .gitignore rules
+        </label>
         <p className="muted">
-          One name per line. Any folder or file with these names is skipped (and its
-          contents). .gitignore rules are also respected.
+          One name or glob per line — e.g. <code>node_modules</code> or <code>*.md</code>.
+          Matching folders and files are skipped (a folder skips its contents too).
         </p>
         <textarea
           className="excludes"
@@ -104,7 +115,7 @@ export function SettingsModal({
             onClick={() => {
               const list = parse(text);
               setExcludes(list);
-              onSave(list);
+              onSave(list, gitignore);
             }}
           >
             Save

@@ -30,14 +30,20 @@ fn exclude_matcher(excludes: &[String]) -> GlobSet {
     builder.build().unwrap_or_else(|_| GlobSet::empty())
 }
 
-/// Walk one root, returning rel_path -> RawInfo. Respects .gitignore (ignore crate
-/// default). Any entry whose file name matches `excludes` is skipped, along with its
-/// descendants (so excluding "node_modules" prunes the whole subtree).
-fn scan_root(root: &Path, excludes: &[String]) -> BTreeMap<String, RawInfo> {
+/// Walk one root, returning rel_path -> RawInfo. When `use_gitignore` is set, .gitignore
+/// (and sibling ignore files) prune the walk. Any entry whose file name matches
+/// `excludes` is skipped, along with its descendants (so excluding "node_modules"
+/// prunes the whole subtree).
+fn scan_root(root: &Path, excludes: &[String], use_gitignore: bool) -> BTreeMap<String, RawInfo> {
     let mut map = BTreeMap::new();
     let skip = exclude_matcher(excludes);
     let walker = WalkBuilder::new(root)
         .hidden(false)
+        .git_ignore(use_gitignore)
+        .git_global(use_gitignore)
+        .git_exclude(use_gitignore)
+        .ignore(use_gitignore)
+        .parents(use_gitignore)
         .filter_entry(move |dent| !skip.is_match(dent.file_name()))
         .build();
     for result in walker {
@@ -82,10 +88,10 @@ fn scan_root(root: &Path, excludes: &[String]) -> BTreeMap<String, RawInfo> {
 
 /// Build the merged Entry tree from N roots. Statuses are left as a placeholder
 /// (Same) here; `compare::resolve_statuses` fills them in afterward.
-pub fn build_tree(roots: &[String], excludes: &[String]) -> Vec<Entry> {
+pub fn build_tree(roots: &[String], excludes: &[String], use_gitignore: bool) -> Vec<Entry> {
     let maps: Vec<BTreeMap<String, RawInfo>> = roots
         .iter()
-        .map(|r| scan_root(Path::new(r), excludes))
+        .map(|r| scan_root(Path::new(r), excludes, use_gitignore))
         .collect();
 
     // Union of all rel_paths across all roots, sorted (BTreeMap keys already sorted).

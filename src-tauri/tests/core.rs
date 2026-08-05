@@ -76,6 +76,7 @@ fn walk_merge_and_statuses() {
             b.path().to_string_lossy().to_string(),
         ],
         vec![],
+        true,
     );
 
     assert_eq!(find(&session.tree, "same.txt").unwrap().status, Status::Same);
@@ -138,6 +139,7 @@ fn compare_ladder() {
             b.path().to_string_lossy().to_string(),
         ],
         vec![],
+        true,
     );
 
     let f1 = find(&s.tree, "f1").unwrap();
@@ -238,6 +240,7 @@ fn three_side_readiness() {
             c.path().to_string_lossy().to_string(),
         ],
         vec![],
+        true,
     );
     let f = find(&s.tree, "f").unwrap();
     assert_eq!(f.sides.len(), 3);
@@ -260,6 +263,7 @@ fn excludes_prune_dirs() {
             b.path().to_string_lossy().to_string(),
         ],
         vec!["node_modules".to_string()],
+        true,
     );
     assert!(find(&s.tree, "keep.txt").is_some());
     assert!(find(&s.tree, "node_modules").is_none());
@@ -282,12 +286,64 @@ fn excludes_match_globs() {
             b.path().to_string_lossy().to_string(),
         ],
         vec!["*.md".to_string()],
+        true,
     );
     assert!(find(&s.tree, "keep.txt").is_some());
     assert!(find(&s.tree, "README.md").is_none());
     assert!(find(&s.tree, "docs/notes.md").is_none());
 }
 
+// 11. the .gitignore toggle: ignored files are hidden when on, visible when off.
+#[test]
+fn gitignore_toggle() {
+    let a = TempDir::new().unwrap();
+    let b = TempDir::new().unwrap();
+    // `ignore` only honors .gitignore inside a real repo, so give the fixture a .git dir.
+    fs::create_dir_all(a.path().join(".git")).unwrap();
+    write(a.path(), ".gitignore", "secret.txt\n");
+    write(a.path(), "secret.txt", "hidden\n");
+    write(a.path(), "keep.txt", "x\n");
+    write(b.path(), "keep.txt", "x\n");
+
+    let roots = vec![
+        a.path().to_string_lossy().to_string(),
+        b.path().to_string_lossy().to_string(),
+    ];
+
+    let on = scan_session(roots.clone(), vec![], true);
+    assert!(find(&on.tree, "keep.txt").is_some());
+    assert!(find(&on.tree, "secret.txt").is_none());
+
+    let off = scan_session(roots, vec![], false);
+    assert!(find(&off.tree, "secret.txt").is_some());
+}
+
 // keep EntryKind import used even if assertions above change
 #[allow(dead_code)]
 fn _kind_used(_k: EntryKind) {}
+
+// 12. .gitignore applies per side: a repo side filters, a plain-folder side does not.
+#[test]
+fn gitignore_is_per_side() {
+    let a = TempDir::new().unwrap();
+    let b = TempDir::new().unwrap();
+    // A is a repo that ignores secret.txt; B is a plain folder with the same files.
+    fs::create_dir_all(a.path().join(".git")).unwrap();
+    write(a.path(), ".gitignore", "secret.txt\n");
+    write(a.path(), "secret.txt", "hidden\n");
+    write(b.path(), ".gitignore", "secret.txt\n");
+    write(b.path(), "secret.txt", "hidden\n");
+
+    let s = scan_session(
+        vec![
+            a.path().to_string_lossy().to_string(),
+            b.path().to_string_lossy().to_string(),
+        ],
+        vec![],
+        true,
+    );
+
+    // Present only on B: A's copy was ignored, B's was not (B has no .git).
+    let secret = find(&s.tree, "secret.txt").expect("B's copy should be present");
+    assert_eq!(secret.status, Status::OnlyIn(1));
+}

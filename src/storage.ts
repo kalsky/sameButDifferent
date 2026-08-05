@@ -67,6 +67,17 @@ export function setExcludes(list: string[]) {
   localStorage.setItem(EXCLUDES_KEY, JSON.stringify(list));
 }
 
+// Whether .gitignore (and sibling ignore files) prune the folder walk.
+const GITIGNORE_KEY = "sbd.gitignore";
+
+export function getUseGitignore(): boolean {
+  return localStorage.getItem(GITIGNORE_KEY) !== "false";
+}
+
+export function setUseGitignore(on: boolean) {
+  localStorage.setItem(GITIGNORE_KEY, String(on));
+}
+
 export interface Recent {
   mode: "folders" | "files";
   a: string;

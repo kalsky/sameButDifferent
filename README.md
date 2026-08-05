@@ -37,9 +37,14 @@ Builds for the **platform you're running on**: macOS (`.app` + `.dmg`), Windows 
   assume same (skip read); size equal + mtime differs → hash both (xxhash) and compare.
 - **Text files** diff via the `similar` crate; copy chevrons splice a hunk side-to-side
   and re-diff. **Binaries** show a hex dump; **images** show side-by-side; **PDF** is
-  v1.1.
+  v1.1. Text views get syntax highlighting, lazily loaded per language from the file
+  name.
+- **What gets skipped** is two things, both in Settings: an exclude list (one name or
+  glob per line — `node_modules`, `*.md`; a matching folder prunes its whole subtree),
+  and a `.gitignore` toggle, on by default. Excluding happens per-root during the walk,
+  so a file is skipped whether or not it exists on the other side.
 
 ## Not yet (addable without redesign)
 
-3-way diff UI · PDF rendering · content-based move/rename detection · syntax
-highlighting · `.gitignore` toggle · atomic writes · bulk folder merge.
+3-way diff UI · PDF rendering · content-based move/rename detection · atomic writes ·
+bulk folder merge.
